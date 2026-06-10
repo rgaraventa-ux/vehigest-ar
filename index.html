@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rodix — Gestión de flota</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f1e3d;
+  --navy2:#162444;
+  --navy3:#1e2f55;
+  --blue:#1d4ed8;
+  --gold:#f0b84a;
+  --gold2:#d9a33c;
+  --bg:#eef0f6;
+  --surface:#ffffff;
+  --surface2:#f4f6fb;
+  --border:#dde1ec;
+  --text:#0f1e3d;
+  --muted:#6b7a99;
+  --ok:#16a34a;
+  --ok-bg:#dcfce7;
+  --warn:#d97706;
+  --warn-bg:#fef3c7;
+  --danger:#dc2626;
+  --danger-bg:#fee2e2;
+  --font:'Inter',sans-serif;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 2px 8px rgba(15,30,61,.08);
+  --shadow-md:0 4px 20px rgba(15,30,61,.12);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5}
+input,select,button,textarea{font-family:var(--font)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ── UTILIDADES ──────────────────────────────────────── */
+.hidden{display:none!important}
+.fade{animation:fadeUp .3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── LOGIN ───────────────────────────────────────────── */
+#login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,var(--navy) 0%,#1a3060 100%);
+  padding:24px;
+}
+.login-card{
+  background:var(--surface);border-radius:20px;padding:48px 40px;
+  width:100%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,.3);
+  animation:fadeUp .4s ease both;
+}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:36px}
+.login-brand-icon{
+  width:46px;height:46px;background:var(--navy);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.login-brand-name{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:-.5px}
+.login-brand-name span{color:var(--gold)}
+.login-title{font-size:26px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:32px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.field input{
+  width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);
+  font-size:15px;outline:none;transition:border-color .2s;
+}
+.field input:focus{border-color:var(--blue)}
+.field input::placeholder{color:var(--muted)}
+.btn-primary{
+  width:100%;padding:13px;background:var(--navy);color:#fff;border:none;
+  border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;
+  transition:background .2s,transform .1s;margin-top:8px;
+  box-shadow:0 4px 12px rgba(15,30,61,.3);
+}
+.btn-primary:hover{background:var(--navy3)}
+.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{opacity:.5;cursor:default}
+.login-toggle{text-align:center;font-size:13px;color:var(--muted);margin-top:20px}
+.login-toggle span{color:var(--blue);cursor:pointer;font-weight:600}
+.login-toggle span:hover{text-decoration:underline}
+.auth-error{
+  background:var(--danger-bg);color:var(--danger);border:1px solid #fca5a5;
+  border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;
+  margin-bottom:16px;display:none;
+}
+.auth-error.show{display:block}
+
+/* ── LAYOUT ──────────────────────────────────────────── */
+#app-screen{display:flex;min-height:100vh}
+.sidebar{
+  width:230px;min-width:230px;background:var(--navy);
+  display:flex;flex-direction:column;padding:24px 14px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 28px}
+.sidebar-brand-icon{
+  width:36px;height:36px;background:var(--gold);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.sidebar-brand-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.sidebar-brand-name span{color:var(--gold)}
+.sidebar-section{
+  font-size:10px;font-weight:700;color:rgba(255,255,255,.35);
+  text-transform:uppercase;letter-spacing:1px;padding:16px 10px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:var(--radius-sm);font-size:14px;font-weight:500;
+  color:rgba(255,255,255,.6);cursor:pointer;
+  transition:background .15s,color .15s;user-select:none;margin-bottom:2px;
+}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(240,184,74,.15);color:var(--gold);font-weight:700}
+.nav-item .nav-icon{font-size:17px;width:22px;text-align:center}
+.nav-badge{
+  margin-left:auto;background:var(--danger);color:#fff;
+  font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;min-width:20px;text-align:center;
+}
+.sidebar-bottom{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer}
+.user-chip:hover{background:rgba(255,255,255,.08)}
+.avatar{
+  width:34px;height:34px;border-radius:50%;background:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:var(--navy);flex-shrink:0;
+}
+.user-name{font-size:13px;font-weight:600;color:#fff}
+.user-email{font-size:11px;color:rgba(255,255,255,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.btn-logout{
+  width:100%;margin-top:8px;padding:9px;background:transparent;
+  border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-sm);
+  color:rgba(255,255,255,.5);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .2s;
+}
+.btn-logout:hover{border-color:rgba(255,255,255,.3);color:#fff}
+
+/* ── MAIN ────────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;min-width:0}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 28px;border-bottom:1px solid var(--border);
+  background:var(--surface);position:sticky;top:0;z-index:10;
+}
+.topbar-title{font-size:19px;font-weight:800;color:var(--navy)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.icon-btn{
+  width:36px;height:36px;border-radius:var(--radius-sm);
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;transition:background .15s;position:relative;
+}
+.icon-btn:hover{background:var(--bg)}
+.icon-btn .dot{
+  position:absolute;top:5px;right:5px;width:8px;height:8px;
+  background:var(--danger);border-radius:50%;border:2px solid var(--surface);
+}
+.page{padding:24px 28px;animation:fadeUp .3s ease both}
+
+/* ── KPI ─────────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow);
+}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.kpi-icon{font-size:22px}
+.kpi-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+.kpi-badge.ok{background:var(--ok-bg);color:var(--ok)}
+.kpi-badge.warn{background:var(--warn-bg);color:var(--warn)}
+.kpi-badge.bad{background:var(--danger-bg);color:var(--danger)}
+.kpi-badge.info{background:#dbeafe;color:var(--blue)}
+.kpi-value{font-size:30px;font-weight:800;color:var(--navy);line-height:1;margin-bottom:4px}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:500}
+
+/* ── BOTONES ACCION ──────────────────────────────────── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:15px;font-weight:700;color:var(--navy)}
+.btn-sm{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+  background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;color:var(--text);cursor:pointer;
+  transition:background .15s,border-color .15s;white-space:nowrap;
+}
+.btn-sm:hover{background:var(--surface2);border-color:var(--blue)}
+.btn-sm.accent{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-sm.accent:hover{background:var(--navy3)}
+.btn-sm.gold{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700}
+.btn-sm.gold:hover{background:var(--gold2)}
+
+/* ── VEHICULOS ───────────────────────────────────────── */
+.vehicle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:32px}
+.vehicle-card{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);
+  padding:20px;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s;
+  box-shadow:var(--shadow);
+}
+.vehicle-card:hover{border-color:var(--blue);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.vehicle-card.add-card{
+  border-style:dashed;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;min-height:220px;
+  color:var(--muted);gap:8px;
+}
+.vehicle-card.add-card:hover{border-color:var(--navy);color:var(--navy)}
+.vc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.vc-icon{font-size:28px}
+.status-pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.4px}
+.s-ok{background:var(--ok-bg);color:var(--ok)}
+.s-warn{background:var(--warn-bg);color:var(--warn)}
+.s-bad{background:var(--danger-bg);color:var(--danger)}
+.vc-brand{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:2px}
+.vc-model{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:10px}
+.vc-plate{
+  display:inline-block;background:var(--navy);color:#fff;
+  border-radius:6px;padding:3px 10px;font-size:13px;font-weight:700;
+  font-family:monospace;letter-spacing:2px;margin-bottom:14px;
+}
+.vc-divider{border:none;border-top:1px solid var(--border);margin-bottom:14px}
+.vc-stats{display:flex;gap:20px}
+.vc-stat-val{font-size:14px;font-weight:700;color:var(--navy)}
+.vc-stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+.vc-alerts{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.alert-tag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px}
+.alert-tag.warn{background:var(--warn-bg);color:var(--warn)}
+.alert-tag.bad{background:var(--danger-bg);color:var(--danger)}
+
+/* ── ALERTAS ─────────────────────────────────────────── */
+.alerts-list{display:flex;flex-direction:column;gap:10px}
+.alert-row{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 18px;
+  display:flex;align-items:center;gap:14px;
+  transition:border-color .15s,box-shadow .15s;
+  box-shadow:var(--shadow);
+}
+.alert-row:hover{border-color:var(--blue);box-shadow:var(--shadow-md);cursor:pointer}
+.alert-row.critical{border-left:4px solid var(--danger)}
+.alert-row.warning{border-left:4px solid var(--warn)}
+.alert-row.ok{border-left:4px solid var(--ok)}
+.alert-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0}
+.alert-info{flex:1;min-width:0}
+.alert-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.alert-sub{font-size:12px;color:var(--muted)}
+.alert-days{text-align:right;flex-shrink:0}
+.alert-days-num{font-size:22px;font-weight:800;line-height:1}
+.alert-days-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* ── DETALLE ─────────────────────────────────────────── */
+.detail-header{
+  display:flex;align-items:flex-start;gap:20px;margin-bottom:24px;
+  padding:24px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+}
+.detail-img{font-size:52px;line-height:1}
+.detail-info{flex:1}
+.detail-make{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:2px}
+.detail-model{font-size:28px;font-weight:800;color:var(--navy);margin-bottom:8px}
+.detail-plate{
+  display:inline-block;background:var(--navy);color:#fff;
+  border-radius:8px;padding:5px 14px;font-size:16px;font-weight:700;
+  font-family:monospace;letter-spacing:3px;margin-bottom:14px;
+}
+.detail-meta{display:flex;gap:20px;flex-wrap:wrap}
+.detail-meta-item{font-size:13px;color:var(--muted)}
+.detail-meta-item strong{color:var(--navy);font-weight:700}
+.detail-actions{display:flex;flex-direction:column;gap:8px;min-width:140px}
+.tabs{
+  display:flex;gap:4px;margin-bottom:20px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:4px;width:fit-content;box-shadow:var(--shadow);
+}
+.tab{
+  padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;
+  cursor:pointer;color:var(--muted);transition:background .15s,color .15s;
+}
+.tab.active{background:var(--navy);color:var(--gold)}
+.tab:hover:not(.active){color:var(--navy);background:var(--surface2)}
+
+/* ── TIMELINE ────────────────────────────────────────── */
+.timeline{display:flex;flex-direction:column;position:relative}
+.timeline::before{
+  content:'';position:absolute;left:20px;top:0;bottom:0;
+  width:2px;background:var(--border);z-index:0;
+}
+.tl-item{display:flex;gap:16px;padding-bottom:20px;position:relative;z-index:1}
+.tl-dot{
+  width:40px;height:40px;border-radius:50%;background:var(--surface2);
+  border:2px solid var(--border);display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0;z-index:1;
+}
+.tl-dot.done{border-color:var(--ok);background:var(--ok-bg)}
+.tl-dot.next{border-color:var(--gold);background:#fef9ee}
+.tl-content{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;flex:1;box-shadow:var(--shadow);
+}
+.tl-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.tl-name{font-size:14px;font-weight:700;color:var(--navy)}
+.tl-date{font-size:12px;color:var(--muted)}
+.tl-details{display:flex;gap:16px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.tl-details strong{color:var(--navy)}
+
+/* ── DOCUMENTOS ──────────────────────────────────────── */
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.doc-card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+}
+.doc-card.expired{border-color:var(--danger);background:#fff8f8}
+.doc-card.warning{border-color:var(--warn);background:#fffdf4}
+.doc-icon{font-size:26px;margin-bottom:10px}
+.doc-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.doc-issuer{font-size:11px;color:var(--muted);margin-bottom:10px}
+.doc-days{
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;
+  display:inline-block;margin-top:6px;
+}
+
+/* ── MODAL ───────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(15,30,61,.6);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fadeUp .2s ease;
+}
+.modal{
+  background:var(--surface);border-radius:20px;padding:32px;
+  width:100%;max-width:520px;max-height:90vh;overflow-y:auto;
+  animation:slideIn .25s ease;box-shadow:0 24px 60px rgba(15,30,61,.25);
+}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.modal-title{font-size:20px;font-weight:800;color:var(--navy)}
+.modal-close{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;color:var(--muted);transition:background .15s;
+}
+.modal-close:hover{background:var(--bg);color:var(--navy)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field select{
+  width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);
+  font-size:15px;outline:none;transition:border-color .2s;appearance:none;
+}
+.field select:focus{border-color:var(--blue)}
+.modal-footer{display:flex;gap:10px;margin-top:24px}
+.btn-cancel{
+  flex:1;padding:12px;background:var(--surface2);
+  border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;
+}
+.btn-cancel:hover{background:var(--bg);color:var(--navy)}
+.btn-save{
+  flex:2;padding:12px;background:var(--navy);border:none;
+  border-radius:var(--radius-sm);color:#fff;font-size:14px;
+  font-weight:700;cursor:pointer;transition:background .2s;
+}
+.btn-save:hover{background:var(--navy3)}
+.btn-save:disabled{opacity:.5;cursor:default}
+
+/* ── TOAST ───────────────────────────────────────────── */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:200;
+  background:var(--navy);color:#fff;border-radius:var(--radius);
+  padding:14px 18px;display:flex;align-items:center;gap:10px;
+  animation:slideIn .3s ease;font-size:14px;font-weight:600;
+  box-shadow:0 8px 32px rgba(15,30,61,.3);
+}
+.toast.error{background:var(--danger)}
+
+/* ── LOADING / EMPTY ─────────────────────────────────── */
+.loading-wrap{display:flex;align-items:center;justify-content:center;height:200px}
+.spinner{
+  width:32px;height:32px;border:3px solid var(--border);
+  border-top-color:var(--navy);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:14px;opacity:.4}
+.empty-msg{font-size:15px;margin-bottom:8px;font-weight:700;color:var(--navy)}
+.empty-sub{font-size:13px}
+
+/* ── SUMMARY BAR ─────────────────────────────────────── */
+.summary-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;
+  display:flex;gap:24px;align-items:center;box-shadow:var(--shadow);
+}
+.summary-stat{text-align:center}
+.summary-stat-val{font-size:28px;font-weight:800;line-height:1}
+.summary-stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.summary-divider{width:1px;background:var(--border);align-self:stretch}
+
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{display:none}
+  .field-row{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .page{padding:16px}
+  .topbar{padding:14px 16px}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .detail-header{flex-direction:column}
+  .detail-actions{flex-direction:row;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ───────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-icon">🚗</div>
+      <div class="login-brand-name">Ro<span>dix</span></div>
+    </div>
+    <div class="login-title">Bienvenido</div>
+    <div class="login-sub">Ingresá a tu cuenta para gestionar tu flota</div>
+    <div id="auth-error" class="auth-error"></div>
+    <div class="field"><label>Email</label><input id="login-email" type="email" placeholder="tu@correo.com"/></div>
+    <div class="field"><label>Contraseña</label><input id="login-pass" type="password" placeholder="••••••••"/></div>
+    <button id="btn-login" class="btn-primary">Ingresar →</button>
+    <div class="login-toggle">¿No tenés cuenta? <span id="toggle-auth">Registrarse</span></div>
+  </div>
+</div>
+
+<!-- ── APP ─────────────────────────────────────────── -->
+<div id="app-screen" class="hidden">
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🚗</div>
+      <div class="sidebar-brand-name">Ro<span>dix</span></div>
+    </div>
+    <div class="sidebar-section">Principal</div>
+    <div class="nav-item active" data-page="dashboard">
+      <span class="nav-icon">📊</span>Dashboard
+    </div>
+    <div class="nav-item" data-page="vehicles">
+      <span class="nav-icon">🚗</span>Vehículos
+    </div>
+    <div class="nav-item" data-page="alerts">
+      <span class="nav-icon">🔔</span>Alertas
+      <span id="sidebar-badge" class="nav-badge hidden">0</span>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-chip">
+        <div id="sidebar-avatar" class="avatar">?</div>
+        <div>
+          <div id="sidebar-name" class="user-name">—</div>
+          <div id="sidebar-email" class="user-email">—</div>
+        </div>
+      </div>
+      <button id="btn-logout" class="btn-logout">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <span id="topbar-title" class="topbar-title">Dashboard</span>
+      <div class="topbar-right">
+        <div class="icon-btn" id="topbar-alerts-btn">
+          🔔<span id="topbar-dot" class="dot hidden"></span>
+        </div>
+        <div id="topbar-avatar" class="avatar" style="cursor:pointer">?</div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page hidden"></div>
+    <!-- VEHICLES -->
+    <div id="page-vehicles" class="page hidden"></div>
+    <!-- VEHICLE DETAIL -->
+    <div id="page-vehicle-detail" class="page hidden"></div>
+    <!-- ALERTS -->
+    <div id="page-alerts" class="page hidden"></div>
+  </div>
+</div>
+
+<!-- ── MODALES ──────────────────────────────────────── -->
+<div id="modal-container"></div>
+<!-- ── TOASTS ───────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ── FIREBASE ────────────────────────────────────── -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, query, orderBy,
+  onSnapshot, addDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── CONFIG ─────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDH4GvbdtPqJwUlnRDqtOUoofkL4PTXiew",
+  authDomain: "vehigest-ar.firebaseapp.com",
+  projectId: "vehigest-ar",
+  storageBucket: "vehigest-ar.firebasestorage.app",
+  messagingSenderId: "150404378851",
+  appId: "1:150404378851:web:940ba835e20c4edeb215d6"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+
+// ── HELPERS ────────────────────────────────────────────
+const SERVICE_CATALOG = [
+  "Cambio de aceite","Filtro de aire","Filtro de combustible",
+  "Frenos delanteros","Frenos traseros","Cubiertas","Alineación y balanceo",
+  "Correa de distribución","Bujías","Amortiguadores","Revisión GNC anual",
+  "Cambio de cubiertas","Servicio mayor","Servicio menor","Otro"
+];
+
+function calcDaysLeft(expiry) {
+  if (!expiry) return null;
+  return Math.round((new Date(expiry) - new Date()) / 86400000);
+}
+function daysColor(d) {
+  if (d === null || d === undefined) return "var(--muted)";
+  if (d < 0) return "var(--danger)";
+  if (d <= 30) return "var(--warn)";
+  return "var(--ok)";
+}
+function daysLabel(d) {
+  if (d === null || d === undefined) return "Sin datos";
+  if (d < 0) return `Vencido hace ${Math.abs(d)}d`;
+  if (d === 0) return "Vence hoy";
+  return `${d} días`;
+}
+function fmtNum(n) { return n != null ? n.toLocaleString("es-AR") : "—"; }
+function fmtARS(n) { return n ? `$${n.toLocaleString("es-AR")}` : "—"; }
+function calcVehicleStatus(docs) {
+  const days = docs.map(d => d.daysLeft).filter(d => d !== null);
+  if (days.some(d => d < 0)) return "bad";
+  if (days.some(d => d <= 30)) return "warn";
+  return "ok";
+}
+function buildAlerts(vehicles) {
+  const alerts = [];
+  vehicles.forEach(v => {
+    v.docs.forEach(d => {
+      if (d.daysLeft === null) return;
+      let level = "ok";
+      if (d.daysLeft < 0) level = "critical";
+      else if (d.daysLeft <= 30) level = "warning";
+      else if (d.daysLeft <= 60) level = "ok";
+      else return;
+      const icon = d.type.includes("VTV") ? "🔍"
+        : d.type.includes("Seguro") ? "🛡️"
+        : d.type.includes("GNC") ? "⚡" : "📋";
+      alerts.push({
+        id: `${v.id}-${d.id}`, vehicleId: v.id,
+        vehicle: `${v.brand} ${v.model}`, plate: v.plate,
+        type: d.type, level, icon, daysLeft: d.daysLeft,
+        msg: d.daysLeft < 0
+          ? `${d.type} vencida hace ${Math.abs(d.daysLeft)} días`
+          : `${d.type} vence en ${d.daysLeft} días`
+      });
+    });
+  });
+  return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+function docIcon(type) {
+  if (type.includes("VTV")) return "🔍";
+  if (type.includes("Seguro")) return "🛡️";
+  if (type.includes("GNC")) return "⚡";
+  if (type.includes("Patente")) return "📋";
+  return "📄";
+}
+function initials(email) {
+  if (!email) return "?";
+  return email.substring(0, 2).toUpperCase();
+}
+
+// ── ESTADO GLOBAL ──────────────────────────────────────
+let vehicles = [];
+let loading = true;
+let currentPage = "dashboard";
+let selectedVehicleId = null;
+let unsubVehicles = null;
+let currentUser = null;
+
+// ── TOAST ──────────────────────────────────────────────
+function showToast(msg, type = "ok") {
+  const el = document.createElement("div");
+  el.className = `toast${type === "error" ? " error" : ""}`;
+  el.textContent = (type === "ok" ? "✅ " : "❌ ") + msg;
+  document.getElementById("toast-container").appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── AUTH ───────────────────────────────────────────────
+let isRegister = false;
+
+function authErrorMap(code) {
+  const m = {
+    "auth/user-not-found": "No existe una cuenta con ese email.",
+    "auth/wrong-password": "Contraseña incorrecta.",
+    "auth/invalid-email": "El email no es válido.",
+    "auth/email-already-in-use": "Ya existe una cuenta con ese email.",
+    "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+    "auth/invalid-credential": "Email o contraseña incorrectos.",
+  };
+  return m[code] || "Ocurrió un error. Intentá de nuevo.";
+}
+
+document.getElementById("toggle-auth").addEventListener("click", () => {
+  isRegister = !isRegister;
+  document.getElementById("btn-login").textContent = isRegister ? "Crear cuenta →" : "Ingresar →";
+  document.getElementById("toggle-auth").textContent = isRegister ? "Ya tengo cuenta" : "Registrarse";
+  document.querySelector(".login-sub").textContent = isRegister
+    ? "Creá tu cuenta para empezar" : "Ingresá a tu cuenta para gestionar tu flota";
+  document.getElementById("auth-error").classList.remove("show");
+});
+
+document.getElementById("btn-login").addEventListener("click", async () => {
+  const email = document.getElementById("login-email").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const errEl = document.getElementById("auth-error");
+  const btn = document.getElementById("btn-login");
+  if (!email || !pass) {
+    errEl.textContent = "Completá todos los campos.";
+    errEl.classList.add("show");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = isRegister ? "Creando cuenta..." : "Ingresando...";
+  errEl.classList.remove("show");
+  try {
+    if (isRegister) {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    } else {
+      await signInWithEmailAndPassword(auth, email, pass);
+    }
+  } catch (e) {
+    errEl.textContent = authErrorMap(e.code);
+    errEl.classList.add("show");
+    btn.disabled = false;
+    btn.textContent = isRegister ? "Crear cuenta →" : "Ingresar →";
+  }
+});
+
+document.getElementById("login-pass").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("btn-login").click();
+});
+
+document.getElementById("btn-logout").addEventListener("click", async () => {
+  if (unsubVehicles) unsubVehicles();
+  await signOut(auth);
+});
+
+// ── AUTH STATE ─────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (user) {
+    currentUser = user;
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("app-screen").classList.remove("hidden");
+    const ini = initials(user.email);
+    document.getElementById("sidebar-avatar").textContent = ini;
+    document.getElementById("topbar-avatar").textContent = ini;
+    document.getElementById("sidebar-name").textContent = user.email.split("@")[0];
+    document.getElementById("sidebar-email").textContent = user.email;
+    startListening();
+    navigateTo("dashboard");
+  } else {
+    currentUser = null;
+    document.getElementById("app-screen").classList.add("hidden");
+    document.getElementById("login-screen").classList.remove("hidden");
+    vehicles = [];
+    loading = true;
+  }
+});
+
+// ── FIRESTORE ──────────────────────────────────────────
+function startListening() {
+  loading = true;
+  const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"));
+  unsubVehicles = onSnapshot(q, async snap => {
+    const vList = await Promise.all(snap.docs.map(async vDoc => {
+      const v = { id: vDoc.id, ...vDoc.data() };
+      const docsData = await new Promise(res => {
+        const unsub = onSnapshot(collection(db, "vehicles", vDoc.id, "docs"), s => {
+          unsub();
+          res(s.docs.map(d => ({ id: d.id, ...d.data(), daysLeft: calcDaysLeft(d.data().expiry) })));
+        });
+      });
+      const svcData = await new Promise(res => {
+        const unsub = onSnapshot(
+          query(collection(db, "vehicles", vDoc.id, "services"), orderBy("performedAt", "desc")),
+          s => { unsub(); res(s.docs.map(d => ({ id: d.id, ...d.data() }))); }
+        );
+      });
+      return { ...v, docs: docsData, services: svcData, status: calcVehicleStatus(docsData) };
+    }));
+    vehicles = vList;
+    loading = false;
+    renderCurrentPage();
+    updateAlertBadge();
+  });
+}
+
+function updateAlertBadge() {
+  const alerts = buildAlerts(vehicles);
+  const critical = alerts.filter(a => a.level !== "ok").length;
+  const badge = document.getElementById("sidebar-badge");
+  const dot = document.getElementById("topbar-dot");
+  if (critical > 0) {
+    badge.textContent = critical;
+    badge.classList.remove("hidden");
+    dot.classList.remove("hidden");
+  } else {
+    badge.classList.add("hidden");
+    dot.classList.add("hidden");
+  }
+}
+
+// ── NAVEGACIÓN ─────────────────────────────────────────
+const PAGE_TITLES = {
+  dashboard: "Dashboard",
+  vehicles: "Vehículos",
+  "vehicle-detail": "",
+  alerts: "Alertas"
+};
+
+document.querySelectorAll(".nav-item[data-page]").forEach(el => {
+  el.addEventListener("click", () => navigateTo(el.dataset.page));
+});
+document.getElementById("topbar-alerts-btn").addEventListener("click", () => navigateTo("alerts"));
+
+function navigateTo(page, extra) {
+  if (extra) selectedVehicleId = extra;
+  currentPage = page;
+  document.querySelectorAll(".nav-item[data-page]").forEach(el => {
+    el.classList.toggle("active", el.dataset.page === page || (page === "vehicle-detail" && el.dataset.page === "vehicles"));
+  });
+  const title = page === "vehicle-detail"
+    ? (vehicles.find(v => v.id === selectedVehicleId) || {brand:"",model:""}).brand + " " +
+      (vehicles.find(v => v.id === selectedVehicleId) || {brand:"",model:""}).model
+    : PAGE_TITLES[page] || "";
+  document.getElementById("topbar-title").textContent = title.trim() || "Detalle";
+  document.querySelectorAll(".page[id^='page-']").forEach(p => p.classList.add("hidden"));
+  renderCurrentPage();
+}
+
+function renderCurrentPage() {
+  const pageEl = document.getElementById(`page-${currentPage}`);
+  if (!pageEl) return;
+  pageEl.classList.remove("hidden");
+  if (currentPage === "dashboard") renderDashboard();
+  else if (currentPage === "vehicles") renderVehicles();
+  else if (currentPage === "vehicle-detail") renderVehicleDetail();
+  else if (currentPage === "alerts") renderAlerts();
+}
+
+// ── SPINNER ────────────────────────────────────────────
+function spinnerHTML() {
+  return '<div class="loading-wrap"><div class="spinner"></div></div>';
+}
+
+// ── DASHBOARD ──────────────────────────────────────────
+function renderDashboard() {
+  const el = document.getElementById("page-dashboard");
+  if (loading) { el.innerHTML = spinnerHTML(); return; }
+  const alerts = buildAlerts(vehicles);
+  const topAlerts = alerts.filter(a => a.level !== "ok").slice(0, 5);
+
+  el.innerHTML = `
+    <div class="kpi-grid fade">
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-icon">🚗</span><span class="kpi-badge info">Flota</span></div>
+        <div class="kpi-value">${vehicles.length}</div>
+        <div class="kpi-label">Vehículos totales</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-icon">✅</span><span class="kpi-badge ok">Al día</span></div>
+        <div class="kpi-value" style="color:var(--ok)">${vehicles.filter(v=>v.status==="ok").length}</div>
+        <div class="kpi-label">Sin vencimientos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-icon">⚠️</span><span class="kpi-badge warn">Atención</span></div>
+        <div class="kpi-value" style="color:var(--warn)">${vehicles.filter(v=>v.status==="warn").length}</div>
+        <div class="kpi-label">Próximos a vencer</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-icon">🚨</span><span class="kpi-badge bad">Crítico</span></div>
+        <div class="kpi-value" style="color:var(--danger)">${vehicles.filter(v=>v.status==="bad").length}</div>
+        <div class="kpi-label">Requieren acción</div>
+      </div>
+    </div>
+
+    ${vehicles.length === 0 ? `
+      <div class="empty">
+        <div class="empty-icon">🚗</div>
+        <div class="empty-msg">No hay vehículos cargados</div>
+        <div class="empty-sub">Agregá tu primer vehículo desde la sección Vehículos</div>
+      </div>` : `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div class="sec-header">
+            <span class="sec-title">Flota</span>
+            <button class="btn-sm" id="dash-ver-flota">Ver todo →</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${vehicles.slice(0,3).map(v => `
+              <div class="vehicle-card" data-vid="${v.id}" style="padding:14px 16px;cursor:pointer">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span style="font-size:24px">${v.icon||"🚗"}</span>
+                  <div style="flex:1">
+                    <div class="vc-brand">${v.brand}</div>
+                    <div class="vc-model" style="font-size:15px;margin-bottom:0">${v.model}</div>
+                  </div>
+                  <div class="status-pill s-${v.status}">${v.status==="ok"?"Al día":v.status==="warn"?"Atención":"Crítico"}</div>
+                </div>
+              </div>`).join("")}
+          </div>
+        </div>
+        <div>
+          <div class="sec-header">
+            <span class="sec-title">Alertas urgentes</span>
+            <button class="btn-sm" id="dash-ver-alertas">Ver todas →</button>
+          </div>
+          ${topAlerts.length === 0
+            ? `<div style="font-size:13px;color:var(--ok);padding:20px 0;font-weight:600">✅ Todo al día</div>`
+            : `<div class="alerts-list">
+                ${topAlerts.map(a => `
+                  <div class="alert-row ${a.level}" data-vid="${a.vehicleId}">
+                    <span class="alert-icon">${a.icon}</span>
+                    <div class="alert-info">
+                      <div class="alert-title">${a.type} — ${a.vehicle}</div>
+                      <div class="alert-sub" style="font-family:monospace;font-size:11px;letter-spacing:1px">${a.plate}</div>
+                    </div>
+                    <div class="alert-days">
+                      <div class="alert-days-num" style="color:${daysColor(a.daysLeft)}">${Math.abs(a.daysLeft)}</div>
+                      <div class="alert-days-lbl">${a.daysLeft<0?"días exp":"días"}</div>
+                    </div>
+                  </div>`).join("")}
+              </div>`}
+        </div>
+      </div>`}
+  `;
+  el.querySelector("#dash-ver-flota")?.addEventListener("click", () => navigateTo("vehicles"));
+  el.querySelector("#dash-ver-alertas")?.addEventListener("click", () => navigateTo("alerts"));
+  el.querySelectorAll(".vehicle-card[data-vid]").forEach(card => {
+    card.addEventListener("click", () => navigateTo("vehicle-detail", card.dataset.vid));
+  });
+  el.querySelectorAll(".alert-row[data-vid]").forEach(row => {
+    row.addEventListener("click", () => navigateTo("vehicle-detail", row.dataset.vid));
+  });
+}
+
+// ── VEHÍCULOS ──────────────────────────────────────────
+function renderVehicles() {
+  const el = document.getElementById("page-vehicles");
+  if (loading) { el.innerHTML = spinnerHTML(); return; }
+  el.innerHTML = `
+    <div class="sec-header fade" style="margin-bottom:20px">
+      <span class="sec-title" style="font-size:17px">Todos los vehículos</span>
+      <button class="btn-sm gold" id="btn-add-vehicle">＋ Agregar vehículo</button>
+    </div>
+    <div class="vehicle-grid fade">
+      ${vehicles.map(v => `
+        <div class="vehicle-card" data-vid="${v.id}">
+          <div class="vc-top">
+            <span class="vc-icon">${v.icon||"🚗"}</span>
+            <div class="status-pill s-${v.status}">${v.status==="ok"?"Al día":v.status==="warn"?"Atención":"Crítico"}</div>
+          </div>
+          <div class="vc-brand">${v.brand} ${v.year||""}</div>
+          <div class="vc-model">${v.model}</div>
+          <div class="vc-plate">${v.plate}</div>
+          <hr class="vc-divider"/>
+          <div class="vc-stats">
+            <div>
+              <div class="vc-stat-val">${fmtNum(v.km)} km</div>
+              <div class="vc-stat-lbl">Kilometraje</div>
+            </div>
+            <div>
+              <div class="vc-stat-val">${v.fuel||"—"}${v.gnc?" + GNC":""}</div>
+              <div class="vc-stat-lbl">Combustible</div>
+            </div>
+          </div>
+          ${v.docs.some(d=>d.daysLeft!==null&&d.daysLeft<30) ? `
+            <div class="vc-alerts">
+              ${v.docs.filter(d=>d.daysLeft!==null&&d.daysLeft<30).map(d=>`
+                <span class="alert-tag ${d.daysLeft<0?"bad":"warn"}">${d.type} ${daysLabel(d.daysLeft)}</span>
+              `).join("")}
+            </div>` : ""}
+        </div>`).join("")}
+      <div class="vehicle-card add-card" id="btn-add-vehicle-card">
+        <span style="font-size:32px;opacity:.3">＋</span>
+        <span style="font-size:14px;font-weight:600">Agregar vehículo</span>
+      </div>
+    </div>
+  `;
+  el.querySelector("#btn-add-vehicle").addEventListener("click", () => openAddVehicleModal());
+  el.querySelector("#btn-add-vehicle-card").addEventListener("click", () => openAddVehicleModal());
+  el.querySelectorAll(".vehicle-card[data-vid]").forEach(card => {
+    card.addEventListener("click", () => navigateTo("vehicle-detail", card.dataset.vid));
+  });
+}
+
+// ── DETALLE VEHÍCULO ───────────────────────────────────
+let detailTab = "docs";
+function renderVehicleDetail() {
+  const el = document.getElementById("page-vehicle-detail");
+  const v = vehicles.find(v => v.id === selectedVehicleId);
+  if (!v) { el.innerHTML = '<div class="empty"><div class="empty-msg">Vehículo no encontrado</div></div>'; return; }
+  const totalCost = v.services.filter(s => s.done).reduce((a, s) => a + (s.cost || 0), 0);
+
+  el.innerHTML = `
+    <div style="margin-bottom:16px" class="fade">
+      <button class="btn-sm" id="btn-back-vehicles">← Volver</button>
+    </div>
+    <div class="detail-header fade">
+      <span class="detail-img">${v.icon||"🚗"}</span>
+      <div class="detail-info">
+        <div class="detail-make">${v.brand} · ${v.year||""}</div>
+        <div class="detail-model">${v.model}</div>
+        <div class="detail-plate">${v.plate}</div>
+        <div class="detail-meta">
+          <div class="detail-meta-item">Combustible: <strong>${v.fuel||"—"}${v.gnc?" + GNC":""}</strong></div>
+          <div class="detail-meta-item">Kilometraje: <strong>${fmtNum(v.km)} km</strong></div>
+          ${v.color ? `<div class="detail-meta-item">Color: <strong>${v.color}</strong></div>` : ""}
+        </div>
+      </div>
+      <div class="detail-actions">
+        <div class="status-pill s-${v.status}" style="font-size:13px;padding:6px 14px;text-align:center">
+          ${v.status==="ok"?"✅ Al día":v.status==="warn"?"⚠️ Atención":"🚨 Crítico"}
+        </div>
+        <button class="btn-sm" id="btn-add-doc">＋ Documento</button>
+        <button class="btn-sm gold" id="btn-add-service">＋ Service</button>
+      </div>
+    </div>
+    <div class="kpi-grid fade" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+      <div class="kpi-card">
+        <div class="kpi-icon">🔧</div>
+        <div class="kpi-value" style="font-size:24px">${v.services.filter(s=>s.done).length}</div>
+        <div class="kpi-label">Services realizados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-value" style="font-size:22px">${fmtARS(totalCost)}</div>
+        <div class="kpi-label">Gasto total</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-value" style="font-size:24px;color:${v.docs.some(d=>d.daysLeft!==null&&d.daysLeft<0)?"var(--danger)":v.docs.some(d=>d.daysLeft!==null&&d.daysLeft<30)?"var(--warn)":"var(--ok)"}">
+          ${v.docs.some(d=>d.daysLeft!==null&&d.daysLeft<0)?"⚠":"✓"}
+        </div>
+        <div class="kpi-label">Documentación</div>
+      </div>
+    </div>
+    <div class="tabs fade">
+      <div class="tab${detailTab==="docs"?" active":""}" id="tab-docs">📋 Documentos</div>
+      <div class="tab${detailTab==="services"?" active":""}" id="tab-services">🔧 Historial de service</div>
+    </div>
+    <div id="tab-content" class="fade"></div>
+  `;
+
+  el.querySelector("#btn-back-vehicles").addEventListener("click", () => navigateTo("vehicles"));
+  el.querySelector("#btn-add-doc").addEventListener("click", () => openAddDocModal(v));
+  el.querySelector("#btn-add-service").addEventListener("click", () => openAddServiceModal(v));
+  el.querySelector("#tab-docs").addEventListener("click", () => { detailTab = "docs"; renderTabContent(v); });
+  el.querySelector("#tab-services").addEventListener("click", () => { detailTab = "services"; renderTabContent(v); });
+  renderTabContent(v);
+}
+
+function renderTabContent(v) {
+  const el = document.getElementById("tab-content");
+  if (!el) return;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById(`tab-${detailTab}`)?.classList.add("active");
+
+  if (detailTab === "docs") {
+    if (v.docs.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-msg">Sin documentos</div><div class="empty-sub">Cargá el primero con el botón de arriba</div></div>';
+      return;
+    }
+    el.innerHTML = `<div class="docs-grid">
+      ${v.docs.map(d => {
+        const cls = d.daysLeft === null ? "" : d.daysLeft < 0 ? "expired" : d.daysLeft < 30 ? "warning" : "";
+        return `<div class="doc-card ${cls}">
+          <div class="doc-icon">${docIcon(d.type)}</div>
+          <div class="doc-name">${d.type}</div>
+          <div class="doc-issuer">${d.issuer||"—"}</div>
+          ${d.policy ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-family:monospace">${d.policy}</div>` : ""}
+          ${d.expiry ? `
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px">VENCE</div>
+            <div style="font-weight:700;font-size:14px;color:var(--navy)">${d.expiry}</div>
+            <div class="doc-days" style="background:${d.daysLeft<0?"var(--danger-bg)":d.daysLeft<30?"var(--warn-bg)":"var(--ok-bg)"};color:${daysColor(d.daysLeft)}">${daysLabel(d.daysLeft)}</div>
+          ` : `<div style="font-size:12px;color:var(--muted);font-style:italic">Sin fecha de vencimiento</div>`}
+          ${d.paid > 0 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">Pagado: <strong style="color:var(--navy)">${fmtARS(d.paid)}</strong></div>` : ""}
+        </div>`;
+      }).join("")}
+    </div>`;
+  } else {
+    if (v.services.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div><div class="empty-msg">Sin services</div><div class="empty-sub">Registrá el primero con el botón de arriba</div></div>';
+      return;
+    }
+    el.innerHTML = `<div class="timeline">
+      ${v.services.map(s => `
+        <div class="tl-item">
+          <div class="tl-dot ${s.done?"done":"next"}">${s.done?"✓":"→"}</div>
+          <div class="tl-content">
+            <div class="tl-top">
+              <span class="tl-name">${s.type}</span>
+              <span class="tl-date">${s.done ? s.performedAt : `<span style="color:var(--gold);font-weight:700">Próximo</span>`}</span>
+            </div>
+            <div class="tl-details">
+              ${s.km ? `<span>Km: <strong>${fmtNum(s.km)}</strong></span>` : ""}
+              ${s.nextKm ? `<span>Próximo: <strong>${fmtNum(s.nextKm)} km</strong></span>` : ""}
+              ${s.workshop ? `<span>Taller: <strong>${s.workshop}</strong></span>` : ""}
+              ${s.cost > 0 ? `<span>Costo: <strong style="color:var(--gold)">${fmtARS(s.cost)}</strong></span>` : ""}
+            </div>
+          </div>
+        </div>`).join("")}
+    </div>`;
+  }
+}
+
+// ── ALERTAS ────────────────────────────────────────────
+function renderAlerts() {
+  const el = document.getElementById("page-alerts");
+  if (loading) { el.innerHTML = spinnerHTML(); return; }
+  const alerts = buildAlerts(vehicles);
+  const critical = alerts.filter(a => a.level === "critical");
+  const warning = alerts.filter(a => a.level === "warning");
+  const okAlerts = alerts.filter(a => a.level === "ok");
+
+  function sectionHTML(title, color, items) {
+    if (!items.length) return "";
+    return `
+      <div style="font-size:13px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;margin-top:24px">${title}</div>
+      <div class="alerts-list">
+        ${items.map(a => `
+          <div class="alert-row ${a.level}" data-vid="${a.vehicleId}" style="cursor:pointer">
+            <span class="alert-icon">${a.icon}</span>
+            <div class="alert-info">
+              <div class="alert-title">${a.msg}</div>
+              <div class="alert-sub">
+                <span style="font-family:monospace;font-size:11px;letter-spacing:1px">${a.plate}</span>
+                <span style="margin:0 8px;opacity:.4">·</span>
+                <span>${a.vehicle}</span>
+              </div>
+            </div>
+            <div class="alert-days">
+              <div class="alert-days-num" style="color:${daysColor(a.daysLeft)}">${a.daysLeft!==null?Math.abs(a.daysLeft):"—"}</div>
+              <div class="alert-days-lbl">${a.daysLeft<0?"días exp.":"días rest."}</div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="summary-bar fade">
+      <div class="summary-stat">
+        <div class="summary-stat-val" style="color:var(--danger)">${critical.length}</div>
+        <div class="summary-stat-lbl">Críticas</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <div class="summary-stat-val" style="color:var(--warn)">${warning.length}</div>
+        <div class="summary-stat-lbl">Advertencias</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <div class="summary-stat-val" style="color:var(--ok)">${okAlerts.length}</div>
+        <div class="summary-stat-lbl">Al día</div>
+      </div>
+      <div style="margin-left:auto;align-self:center">
+        <div style="font-size:12px;color:var(--muted)">Tocá una alerta para ver el vehículo</div>
+      </div>
+    </div>
+    ${alerts.length === 0 ? `<div class="empty"><div class="empty-icon">🔔</div><div class="empty-msg">Sin alertas por ahora</div><div class="empty-sub">Cargá documentos con fecha de vencimiento para que aparezcan acá</div></div>` : ""}
+    ${sectionHTML("🚨 Requieren acción inmediata", "var(--danger)", critical)}
+    ${sectionHTML("⚠️ Próximos a vencer", "var(--warn)", warning)}
+    ${sectionHTML("✅ En orden", "var(--ok)", okAlerts)}
+  `;
+  el.querySelectorAll(".alert-row[data-vid]").forEach(row => {
+    row.addEventListener("click", () => navigateTo("vehicle-detail", row.dataset.vid));
+  });
+}
+
+// ── MODAL HELPERS ──────────────────────────────────────
+function openModal(html) {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = html;
+  document.getElementById("modal-container").appendChild(wrap);
+  return wrap;
+}
+function closeModal() {
+  document.getElementById("modal-container").innerHTML = "";
+}
+
+// ── MODAL: AGREGAR VEHÍCULO ────────────────────────────
+function openAddVehicleModal() {
+  const wrap = openModal(`
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">🚗 Agregar vehículo</span>
+          <div class="modal-close" id="modal-close-btn">✕</div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Marca *</label><input id="f-brand" placeholder="Toyota"/></div>
+          <div class="field"><label>Modelo *</label><input id="f-model" placeholder="Hilux"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Año</label><input id="f-year" type="number" value="2024"/></div>
+          <div class="field"><label>Patente *</label><input id="f-plate" placeholder="AB999CD" style="font-family:monospace;letter-spacing:2px"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Combustible</label>
+            <select id="f-fuel"><option>Nafta</option><option>Diesel</option><option>GNC</option><option>Eléctrico</option><option>Híbrido</option></select>
+          </div>
+          <div class="field"><label>Kilometraje actual</label><input id="f-km" type="number" value="0"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Color</label><input id="f-color" placeholder="Blanco"/></div>
+          <div class="field"><label>¿Tiene GNC?</label>
+            <select id="f-gnc"><option value="no">No</option><option value="si">Sí</option></select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" id="modal-cancel-btn">Cancelar</button>
+          <button class="btn-save" id="modal-save-btn">Guardar vehículo</button>
+        </div>
+      </div>
+    </div>
+  `);
+  wrap.querySelector("#modal-close-btn").addEventListener("click", closeModal);
+  wrap.querySelector("#modal-cancel-btn").addEventListener("click", closeModal);
+  wrap.querySelector(".modal-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); });
+  wrap.querySelector("#modal-save-btn").addEventListener("click", async () => {
+    const brand = wrap.querySelector("#f-brand").value.trim();
+    const model = wrap.querySelector("#f-model").value.trim();
+    const plate = wrap.querySelector("#f-plate").value.trim().toUpperCase();
+    if (!brand || !model || !plate) { showToast("Completá los campos obligatorios", "error"); return; }
+    const btn = wrap.querySelector("#modal-save-btn");
+    btn.disabled = true; btn.textContent = "Guardando...";
+    try {
+      await addDoc(collection(db, "vehicles"), {
+        brand, model,
+        year: parseInt(wrap.querySelector("#f-year").value) || 2024,
+        plate,
+        fuel: wrap.querySelector("#f-fuel").value,
+        gnc: wrap.querySelector("#f-gnc").value === "si",
+        km: parseInt(wrap.querySelector("#f-km").value) || 0,
+        color: wrap.querySelector("#f-color").value.trim(),
+        icon: "🚗", createdAt: serverTimestamp()
+      });
+      closeModal();
+      showToast(`${brand} ${model} agregado`);
+    } catch (e) {
+      showToast("Error al guardar", "error");
+      btn.disabled = false; btn.textContent = "Guardar vehículo";
+    }
+  });
+}
+
+// ── MODAL: AGREGAR SERVICE ─────────────────────────────
+function openAddServiceModal(v) {
+  const wrap = openModal(`
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">🔧 Registrar service</span>
+          <div class="modal-close" id="modal-close-btn">✕</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;font-family:monospace;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)">
+          ${v.brand} ${v.model} · ${v.plate}
+        </div>
+        <div class="field"><label>Tipo de service *</label>
+          <select id="f-type">${SERVICE_CATALOG.map(s=>`<option>${s}</option>`).join("")}</select>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Fecha *</label><input id="f-date" type="date"/></div>
+          <div class="field"><label>Km al momento *</label><input id="f-km" type="number" placeholder="87000"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Próximo service (km)</label><input id="f-nextKm" type="number" placeholder="92000"/></div>
+          <div class="field"><label>Costo total (ARS)</label><input id="f-cost" type="number" placeholder="28000"/></div>
+        </div>
+        <div class="field"><label>Taller / Concesionaria</label><input id="f-workshop" placeholder="Nombre del taller"/></div>
+        <div class="modal-footer">
+          <button class="btn-cancel" id="modal-cancel-btn">Cancelar</button>
+          <button class="btn-save" id="modal-save-btn">Guardar service</button>
+        </div>
+      </div>
+    </div>
+  `);
+  wrap.querySelector("#modal-close-btn").addEventListener("click", closeModal);
+  wrap.querySelector("#modal-cancel-btn").addEventListener("click", closeModal);
+  wrap.querySelector(".modal-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); });
+  wrap.querySelector("#modal-save-btn").addEventListener("click", async () => {
+    const date = wrap.querySelector("#f-date").value;
+    const km = wrap.querySelector("#f-km").value;
+    if (!date || !km) { showToast("Fecha y kilometraje son obligatorios", "error"); return; }
+    const btn = wrap.querySelector("#modal-save-btn");
+    btn.disabled = true; btn.textContent = "Guardando...";
+    try {
+      await addDoc(collection(db, "vehicles", v.id, "services"), {
+        type: wrap.querySelector("#f-type").value,
+        performedAt: date,
+        km: parseInt(km) || 0,
+        nextKm: wrap.querySelector("#f-nextKm").value ? parseInt(wrap.querySelector("#f-nextKm").value) : null,
+        workshop: wrap.querySelector("#f-workshop").value.trim(),
+        cost: parseInt(wrap.querySelector("#f-cost").value) || 0,
+        done: true, createdAt: serverTimestamp()
+      });
+      closeModal();
+      showToast("Service registrado");
+    } catch (e) {
+      showToast("Error al guardar", "error");
+      btn.disabled = false; btn.textContent = "Guardar service";
+    }
+  });
+}
+
+// ── MODAL: AGREGAR DOCUMENTO ───────────────────────────
+function openAddDocModal(v) {
+  const wrap = openModal(`
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">📋 Cargar documento</span>
+          <div class="modal-close" id="modal-close-btn">✕</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;font-family:monospace;background:var(--surface2);padding:8px 12px;border-radius:var(--radius-sm)">
+          ${v.brand} ${v.model} · ${v.plate}
+        </div>
+        <div class="field"><label>Tipo de documento *</label>
+          <select id="f-type">
+            <option>VTV</option><option>Seguro</option><option>Patente 1°</option>
+            <option>Patente 2°</option><option>Oblea GNC</option>
+            <option>Licencia</option><option>Cédula verde</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Emisor / Compañía</label><input id="f-issuer" placeholder="La Caja, ARBA..."/></div>
+          <div class="field"><label>N° de póliza / referencia</label><input id="f-policy" placeholder="POL-2024-0001"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Fecha de vencimiento *</label><input id="f-expiry" type="date"/></div>
+          <div class="field"><label>Monto pagado (ARS)</label><input id="f-amount" type="number" placeholder="65000"/></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" id="modal-cancel-btn">Cancelar</button>
+          <button class="btn-save" id="modal-save-btn">Guardar documento</button>
+        </div>
+      </div>
+    </div>
+  `);
+  wrap.querySelector("#modal-close-btn").addEventListener("click", closeModal);
+  wrap.querySelector("#modal-cancel-btn").addEventListener("click", closeModal);
+  wrap.querySelector(".modal-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeModal(); });
+  wrap.querySelector("#modal-save-btn").addEventListener("click", async () => {
+    const expiry = wrap.querySelector("#f-expiry").value;
+    if (!expiry) { showToast("La fecha de vencimiento es obligatoria", "error"); return; }
+    const btn = wrap.querySelector("#modal-save-btn");
+    btn.disabled = true; btn.textContent = "Guardando...";
+    try {
+      await addDoc(collection(db, "vehicles", v.id, "docs"), {
+        type: wrap.querySelector("#f-type").value,
+        issuer: wrap.querySelector("#f-issuer").value.trim(),
+        policy: wrap.querySelector("#f-policy").value.trim(),
+        expiry,
+        paid: parseInt(wrap.querySelector("#f-amount").value) || 0,
+        createdAt: serverTimestamp()
+      });
+      closeModal();
+      showToast("Documento cargado");
+    } catch (e) {
+      showToast("Error al guardar", "error");
+      btn.disabled = false; btn.textContent = "Guardar documento";
+    }
+  });
+}
+</script>
+</body>
+</html>
