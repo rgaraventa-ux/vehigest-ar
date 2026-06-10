@@ -499,7 +499,7 @@ import {
   onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, query, orderBy,
+  getFirestore, collection, doc, query, orderBy, where,
   onSnapshot, addDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -687,7 +687,7 @@ onAuthStateChanged(auth, user => {
 // ── FIRESTORE ──────────────────────────────────────────
 function startListening() {
   loading = true;
-  const q = query(collection(db, "vehicles"), orderBy("createdAt", "desc"));
+  const q = query(collection(db, "vehicles"), where("uid", "==", currentUser.uid), orderBy("createdAt", "desc"));
   unsubVehicles = onSnapshot(q, async snap => {
     const vList = await Promise.all(snap.docs.map(async vDoc => {
       const v = { id: vDoc.id, ...vDoc.data() };
@@ -1160,7 +1160,7 @@ function openAddVehicleModal() {
         gnc: wrap.querySelector("#f-gnc").value === "si",
         km: parseInt(wrap.querySelector("#f-km").value) || 0,
         color: wrap.querySelector("#f-color").value.trim(),
-        icon: "🚗", createdAt: serverTimestamp()
+        icon: "🚗", uid: currentUser.uid, createdAt: serverTimestamp()
       });
       closeModal();
       showToast(`${brand} ${model} agregado`);
