@@ -405,14 +405,31 @@ input,select,button,textarea{font-family:var(--font)}
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .sidebar{display:none}
   .field-row{grid-template-columns:1fr}
+  .dash-two-col{grid-template-columns:1fr!important}
+  .kpi-grid-3{grid-template-columns:repeat(2,1fr)!important}
+  .mob-nav{display:block!important}
+  .main{padding-bottom:70px}
 }
 @media(max-width:600px){
-  .page{padding:16px}
-  .topbar{padding:14px 16px}
+  .page{padding:14px}
+  .topbar{padding:12px 14px}
+  .topbar-title{font-size:16px}
   .kpi-grid{grid-template-columns:1fr 1fr}
+  .kpi-value{font-size:22px!important}
   .detail-header{flex-direction:column}
   .detail-actions{flex-direction:row;flex-wrap:wrap}
+  .vehicle-grid{grid-template-columns:1fr}
+  .docs-grid{grid-template-columns:1fr 1fr}
+  .modal{padding:20px}
+  .venta-row{padding:10px 12px}
 }
+/* NAV MÓVIL */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);z-index:50;padding:8px 0 max(8px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.1)}
+.mob-nav-items{display:flex;justify-content:space-around}
+.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;color:rgba(255,255,255,.5);cursor:pointer;font-size:10px;font-weight:600;min-width:52px;border-radius:8px;transition:color .15s}
+.mob-nav-item.active{color:var(--gold)}
+.mob-nav-item .mob-icon{font-size:20px}
+.mob-badge{background:var(--danger);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:2px;vertical-align:top}
 </style>
 </head>
 <body>
@@ -718,13 +735,16 @@ function updateAlertBadge() {
   const critical = alerts.filter(a => a.level !== "ok").length;
   const badge = document.getElementById("sidebar-badge");
   const dot = document.getElementById("topbar-dot");
+  const mobBadge = document.getElementById("mob-alert-badge");
   if (critical > 0) {
     badge.textContent = critical;
     badge.classList.remove("hidden");
     dot.classList.remove("hidden");
+    if (mobBadge) { mobBadge.textContent = critical; mobBadge.classList.remove("hidden"); }
   } else {
     badge.classList.add("hidden");
     dot.classList.add("hidden");
+    if (mobBadge) mobBadge.classList.add("hidden");
   }
 }
 
@@ -747,6 +767,7 @@ function navigateTo(page, extra) {
   document.querySelectorAll(".nav-item[data-page]").forEach(el => {
     el.classList.toggle("active", el.dataset.page === page || (page === "vehicle-detail" && el.dataset.page === "vehicles"));
   });
+  updateMobNav(page);
   const title = page === "vehicle-detail"
     ? (vehicles.find(v => v.id === selectedVehicleId) || {brand:"",model:""}).brand + " " +
       (vehicles.find(v => v.id === selectedVehicleId) || {brand:"",model:""}).model
@@ -808,7 +829,7 @@ function renderDashboard() {
         <div class="empty-msg">No hay vehículos cargados</div>
         <div class="empty-sub">Agregá tu primer vehículo desde la sección Vehículos</div>
       </div>` : `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="dash-two-col">
         <div>
           <div class="sec-header">
             <span class="sec-title">Flota</span>
@@ -944,7 +965,7 @@ function renderVehicleDetail() {
         <button class="btn-sm gold" id="btn-add-service">＋ Service</button>
       </div>
     </div>
-    <div class="kpi-grid fade" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+    <div class="kpi-grid fade" class="kpi-grid kpi-grid-3" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
       <div class="kpi-card">
         <div class="kpi-icon">🔧</div>
         <div class="kpi-value" style="font-size:24px">${v.services.filter(s=>s.done).length}</div>
@@ -1290,6 +1311,32 @@ function openAddDocModal(v) {
     }
   });
 }
+
+// ── NAV MÓVIL ──────────────────────────────────────────
+function updateMobNav(page) {
+  document.querySelectorAll(".mob-nav-item[data-page]").forEach(el => {
+    el.classList.toggle("active",
+      el.dataset.page === page ||
+      (page === "vehicle-detail" && el.dataset.page === "vehicles")
+    );
+  });
+}
 </script>
+
+<!-- NAV MÓVIL -->
+<div class="mob-nav" id="mob-nav">
+  <div class="mob-nav-items">
+    <div class="mob-nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+      <span class="mob-icon">📊</span>Dashboard
+    </div>
+    <div class="mob-nav-item" data-page="vehicles" onclick="navigateTo('vehicles')">
+      <span class="mob-icon">🚗</span>Vehículos
+    </div>
+    <div class="mob-nav-item" data-page="alerts" onclick="navigateTo('alerts')">
+      <span class="mob-icon">🔔</span>Alertas<span class="mob-badge hidden" id="mob-alert-badge">0</span>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
